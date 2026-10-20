@@ -1,0 +1,29 @@
+# --- Rahasia: JANGAN pernah di-commit ---
+.env
+
+# --- Environment Python ---
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# --- Data (terlalu besar, bisa diunduh ulang) ---
+data/**
+!data/**/
+!data/**/.gitkeep
+
+# --- dbt (dipakai mulai Fase 4) ---
+dbt/olist/target/
+dbt/olist/logs/
+dbt/olist/dbt_packages/
+
+# --- Airflow (dipakai mulai Fase 7) ---
+airflow/logs/
+
+# --- Editor & OS ---
+.vscode/
+.DS_Store
+Thumbs.db
+
+# --- Power BI: file sementara saja, .pbix tetap di-commit ---
+~$*.pbix

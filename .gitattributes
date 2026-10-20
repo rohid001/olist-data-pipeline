@@ -1,0 +1,12 @@
+# Semua file teks disimpan dan di-checkout dengan akhir baris LF,
+# karena file SQL, YAML, dan script nanti dijalankan di container Linux.
+* text=auto eol=lf
+
+# Pengecualian: script khusus Windows tetap CRLF
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# File biner: jangan diubah sama sekali
+*.pbix binary
+*.png binary
+*.zip binary
