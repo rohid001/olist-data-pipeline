@@ -1,5 +1,5 @@
 """
-konfigurasi.py
+settingsurasi.py
 Membaca pengaturan warehouse dari file .env dan membuat koneksi database.
 Semua modul ingestion memakai file ini, jadi password hanya tersimpan di .env.
 """
@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 from sqlalchemy import URL, Engine, create_engine, text
 
 # Root repo = satu folder di atas folder ingestion/
-FOLDER_ROOT = Path(__file__).resolve().parent.parent
-FILE_ENV = FOLDER_ROOT / ".env"
+ROOT_DIR = Path(__file__).resolve().parent.parent
+ENV_FILE = ROOT_DIR / ".env"
 
 VARIABEL_WAJIB = [
     "WAREHOUSE_HOST",
@@ -22,14 +22,14 @@ VARIABEL_WAJIB = [
     "WAREHOUSE_PASSWORD",
 ]
 
-def ambil_konfigurasi() -> dict:
+def get_settings() -> dict:
     """Baca .env, cek semua variabel wajib terisi, lalu kembalikan sebagai dict."""
-    if not FILE_ENV.exists():
+    if not ENV_FILE.exists():
         raise FileNotFoundError(
-            f"File .env tidak ditemukan di {FILE_ENV}. "
+            f"File .env tidak ditemukan di {ENV_FILE}. "
             "Salin .env.example menjadi env lalu isi password-nya."
         )
-    load_dotenv(FILE_ENV)
+    load_dotenv(ENV_FILE)
     
     belum_diisi = [nama for nama in VARIABEL_WAJIB if not os.getenv(nama)]
     if belum_diisi:
@@ -43,34 +43,34 @@ def ambil_konfigurasi() -> dict:
         "password": os.getenv("WAREHOUSE_PASSWORD"),
     }
     
-def buat_engine() -> Engine:
+def get_engine() -> Engine:
     """Buat engine SQLAlchemy ke warehouse.
     
     Pakia URL.create (bukan f-string) supaya passowrd berisi karakter
     khusus seperti @ atau # tidak merusak alamat koneksi
     """
     
-    konfig = ambil_konfigurasi()
+    settings = get_settings()
     url = URL.create(
         drivername="postgresql+psycopg2",
-        username=konfig["user"],
-        password=konfig["password"],
-        host=konfig["host"],
-        port=konfig["port"],
-        database=konfig["database"],
+        username=settings["user"],
+        password=settings["password"],
+        host=settings["host"],
+        port=settings["port"],
+        database=settings["database"],
     )
     return create_engine(url)
     
 if __name__ == "__main__":
-    # Uji Tahap A: env terbaca, password tidak ikut ditampilkan
-    konfig = ambil_konfigurasi()
-    for kunci, nilai in konfig.items():
-        tampil = "********" if kunci == "password" else nilai
-        print(f"{kunci:<9}: {tampil}")
+    # Uji Tahap A: env terbaca, password tidak ikut dishownkan
+    settings = get_settings()
+    for key, value in settings.items():
+        shown = "********" if key == "password" else value
+        print(f"{key:<9}: {shown}")
     print("Konfigurasi OK")
     # Uji Tahap B: engine bisa menjalankan query paling sederhana
-    engine = buat_engine()
-    with engine.connect() as koneksi:
-        hasil = koneksi.execute(text("SELECT 1")).scalar()
-    print(f"SELECT 1 -> {hasil}")
+    engine = get_engine()
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT 1")).scalar()
+    print(f"SELECT 1 -> {result}")
     
