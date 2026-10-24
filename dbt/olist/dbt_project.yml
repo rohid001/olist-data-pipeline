@@ -1,0 +1,28 @@
+# Konfigurasi project dbt: nama, lokasi folder, dan aturan default tiap folder model
+name: olist
+version: "1.0.0"
+profile: olist
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+clean-targets: ["target", "dbt_packages"]
+
+flags:
+    # Jangan kirim statistik pemakaian anonim ke dbt labs
+  send_anoymous_usage_stats: False
+
+models:
+  olist:
+    staging:
+      +materialized: view
+      +schema: staging
+
+seeds:
+  olist:
+    +schema: raw
+    product_category_name_translation:
+      +column_types:
+        product_category_name: text
+        product_category_name_english: text

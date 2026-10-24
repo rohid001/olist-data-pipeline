@@ -16,6 +16,7 @@ data/**
 dbt/olist/target/
 dbt/olist/logs/
 dbt/olist/dbt_packages/
+dbt/olist/.user.yml
 
 # --- Airflow (dipakai mulai Fase 7) ---
 airflow/logs/

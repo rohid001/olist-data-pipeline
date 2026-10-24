@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    description: Salinan CSV Olist, dimuat oleh ingestion/load_raw.py. Semua kolom bisnis bertipe TEXT.
+    tables:
+      - name: orders
+        description: Satu baris per order. Dipartisi menurut bulan order_purchase_timestamp.
+      - name: order_items
+        description: Satu per item di daalam order. Ikut batch order-nya.
+      - name: order_payments
+        description: Satu baris per pembayaran (satu order bisa beberapa kali bayar).
+      - name: order_reviews
+        description: Review pelanggan. review_id saja tidak unik (814 duplikat).
+      - name: customers
+        description: Satu baris per customer_id. customer_id dibuat baru untuk setiap order.
+      - name: products
+        description: Satu baris per produk, dimuat dengan upsert.
+      - name: sellers
+        description: Satu baris per seller, dimuat dengan upsert.
+      - name: geolocation
+        description: Data referensi kode pos; banyk baris kembar, dimuat ulang penuh. 
