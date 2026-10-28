@@ -22,13 +22,13 @@ customer_orders as (
         customers.customer_state,
         row_number() over (
             partition by customers.customer_unique_id
-            order by orders.order_purchase_timestamp desc, orders.order_id
+            order by orders.order_purchase_timestamp desc, orders.order_id asc
         ) as recency_rank,
         count(*) over (partition by customers.customer_unique_id) as order_count,
         min(orders.order_purchase_timestamp) over (
             partition by customers.customer_unique_id
         ) as first_order_at,
-        max(orders.order_purchase_timestamp) over(
+        max(orders.order_purchase_timestamp) over (
             partition by customers.customer_unique_id
         ) as last_order_at
     from orders

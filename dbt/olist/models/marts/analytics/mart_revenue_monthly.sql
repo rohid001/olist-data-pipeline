@@ -30,6 +30,6 @@ select
     round(lag(revenue) over (order by month), 2) as previous_month_revenue,
     round(
         100.0 * (revenue - lag(revenue) over (order by month))
-        / nullif(lag(revenue) over (order by month), 0), 2   
+        / nullif(lag(revenue) over (order by month), 0), 2
     ) as growth_mom_pct
 from monthly_revenue

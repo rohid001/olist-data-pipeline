@@ -61,7 +61,7 @@ order_gaps as (
     select
         order_purchase_timestamp - lag(order_purchase_timestamp) over (
             partition by customer_unique_id order by order_purchase_timestamp
-        )as gap
+        ) as gap
     from customer_orders
 
 ),

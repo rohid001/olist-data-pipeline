@@ -1,0 +1,134 @@
+version: 2
+
+# Test model staging. Kebanyakan berasal dari temuan audit Fase project DA:
+# kunci unik, tidak ada root order (reletionship), dan nilai kategori yang valid.
+models:
+  - name: stg_orders
+    columns:
+      - name: order_id
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        data_tests:
+          - not_null
+      - name: order_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values : ['delivered', 'shipped', 'canceled', 'unavailable',
+                          'invoiced', 'processing', 'created', 'approved']
+      - name: order_purchase_timestamp
+        data_tests:
+          - not_null
+
+  - name: stg_order_items
+    data_tests:
+      # Kunci gabungan: satu order_item_id hanya muncul sekali di tiap order
+      - unique:
+          arguments:
+            column_name: "order_id || '-' || order_item_id"
+    columns:
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: product_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_products')
+                field: product_id
+      - name: seller_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_sellers')
+                field: seller_id
+      - name: price
+        data_tests:
+          - not_null
+
+  - name: stg_order_payments
+    data_tests:
+      - unique:
+          arguments:
+            column_name: "order_id || '-' || payment_sequential"
+    columns:
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: payment_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['credit_card', 'boleto', 'voucher', 'debit_card', 'not_defined']
+
+  - name: stg_order_reviews
+    columns:
+      - name: review_id
+        data_tests:
+          # Pengganti VIEW order_reviews_dedup harus benar-benar bebas duplikat
+          - unique
+          - not_null
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: review_score
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+  
+  - name: stg_customers
+    columns:
+      - name: customer_id
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_unique_id
+        data_tests:
+          - not_null
+  
+  - name: stg_products
+    columns:
+      - name: product_id
+        data_tests:
+          - unique
+          - not_null
+      - name: product_category_name
+        data_tests:
+          # Temuan Audit DA: setiap kategori harus punya terjemahan (NULL diabaikan)
+          - relationships:
+              arguments:
+                to: ref('stg_product_category_name_translation')
+                field: product_category_name
+
+  - name: stg_sellers
+    columns:
+      - name: seller_id
+        data_tests: 
+          - unique
+          - not_null
+  
+  - name: stg_geolocation
+    columns:
+      - name: geolocation_zip_code_prefix
+        data_tests:
+          - not_null
+  
+  - name: stg_product_category_name_translation
+    columns:
+      - name: product_category_name
+        data_tests:
+          - unique
+          - not_null

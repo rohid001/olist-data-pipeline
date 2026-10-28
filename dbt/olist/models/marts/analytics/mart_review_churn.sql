@@ -23,7 +23,10 @@ customer_status as (
     select
         customer_orders.customer_unique_id,
         case
-            when reference_date.max_date::date - max(customer_orders.order_purchase_timestamp)::date > {{ var('churn_threshold_days') }} then 'At Risk'
+            when
+                reference_date.max_date::date - max(customer_orders.order_purchase_timestamp)::date
+                > {{ var('churn_threshold_days') }}
+                then 'At Risk'
             else 'Active'
         end as churn_status
     from customer_orders
@@ -48,5 +51,7 @@ select
     round(avg(customer_avg_review.avg_review_score), 2) as avg_review_score,
     count(*) as customer_count
 from customer_status
-inner join customer_avg_review on customer_status.customer_unique_id = customer_avg_review.customer_unique_id
+inner join
+    customer_avg_review
+    on customer_status.customer_unique_id = customer_avg_review.customer_unique_id
 group by customer_status.churn_status

@@ -1,0 +1,111 @@
+version: 2
+
+# Test mart analitik: grain dan nilai yang dihasilkan aturan bisnis project DA.
+models:
+  - name: mart_customer_rfm
+    description: Skor dan segmen RFM per pelanggan (Q1 project DA)
+    columns:
+      - name: customer_unique_id
+        data_tests:
+          - unique
+          - not_null
+      - name: r_score
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+      - name: f_score
+        data_tests:
+          # Business rule DA: frequency 1 -> 1, 2 -> 3, 3 atau lebih -> 5
+          - accepted_values:
+              arguments:
+                values: [1, 3, 5]
+                quote: false
+      - name: m_score
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+      - name: rfm_segment
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Champions', 'Loyal Customers', 'New Customers',
+                        'At Risk (dulu loyal)', 'Lost / Hibernating', 'Others']
+      
+  - name: mart_buyer_type
+    description: Kontribusi revenue one-time vs repeat buyer (Q2)
+    columns:
+      - name: customer_type
+        data_tests:
+          - unique
+          - accepted_values:
+              arguments:
+                values: ['One-time buyer', 'Repeat buyer']
+
+  - name: mart_revenue_monthly
+    description: Revenue bulanan dan growth MoM (Q3 + Q5).
+    columns:
+      - name: month
+        data_tests:
+          - unique
+          - not_null
+  
+  - name: mart_seasonality
+    description: Revenue per bulan kalender, semua tahun digabung (Q5).
+    columns:
+      - name: month_number
+        data_tests:
+          - unique
+  
+  - name: mart_category_growth
+    description: Growth revenue kategori 2017 vs 2018 (Q4).
+    columns:
+      - name: category
+        data_tests:
+          - unique
+  
+  - name: mart_customer_churn
+    description: Status churn per pelanggan (Q6b).
+    columns:
+      - name: customer_unique_id
+        data_tests:
+          - unique
+          - not_null
+      - name: churn_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Active', 'At Risk']
+
+  - name: mart_review_churn
+    description: Rata-rata review score per status churn (Q7).
+    columns:
+      - name: churn_status
+        data_tests:
+          - unique
+          - accepted_values:
+              arguments:
+                values: ['Active', 'At Risk']
+  
+  - name : mart_category_per_state
+    description: Kategori dengan margin kasar terbesar di tiap state (Q8).
+    columns:
+      - name: customer_state
+        data_tests:
+          - not_null
+  
+  - name: mart_revenue_per_state
+    description: Revenue dan revenue per pelanggan tiap state (Q9)
+    columns:
+      - name: customer_state
+        data_tests:
+          - unique
+          - not_null
+  
+  - name: mart_overview_kpi
+    description: KPI halaman Overview ditambah rata-rata jeda antar-order (07 + Q6a)
+    
+      

@@ -25,12 +25,12 @@ typed as (
 ),
 
 ranked as (
-    
+
     select
         *,
-        row_number() over(
+        row_number() over (
             partition by review_id
-            order by review_answer_timestamp desc nulls last, order_id
+            order by review_answer_timestamp desc nulls last, order_id asc
         ) as row_num
     from typed
 

@@ -1,0 +1,26 @@
+# Aturan lint SQL untuk model dbt. Jalankan dari root repo:
+#   sqlfluff lint dbt/olist/models dbt/olist/tests
+[sqlfluff]
+dialect = postgres
+templater = dbt
+max_line_length = 100
+# ST06 meminta kolom hasil perhitungan diletakkan di akhir SELECT. Tidak dipakai karena
+# urutan kolom mart mengikuti arti bisnisnya (kunci dulu) dan sudah dipakai Power BI.
+exclude_rules = structure.column_order
+
+[sqlfluff:templater:dbt]
+project_dir = dbt/olist
+profiles_dir = dbt/olist
+
+[sqlfluff:indentation]
+tab_space_size = 4
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:references.keywords]
+# Kolom "month" di mart_revenue_monthly sudah dipakai regression check dan dashboard
+ignore_words = month

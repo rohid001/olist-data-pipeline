@@ -5,7 +5,7 @@
 --  * tiebreakeer customer_unique_id supaya NTILE selalu sama
 --  * reference date = order terakhir dari SEMUA status, bukan hanya delivered
 with customer_orders as (
-    
+
     select * from {{ ref('int_customer_orders') }}
     -- Project DA memakai inner join ke total pembayaran, jadi order tanpa pembayaran tidak ikut
     where payment_total is not null
@@ -46,7 +46,7 @@ customer_rfm_scored as (
             when customer_rfm_raw.frequency >= 3 then 5
         end as f_score,
         ntile(5) over (
-            order by customer_rfm_raw.monetary asc, customer_rfm_raw.customer_unique_id
+            order by customer_rfm_raw.monetary asc, customer_rfm_raw.customer_unique_id asc
         ) as m_score
     from customer_rfm_raw
     cross join reference_date

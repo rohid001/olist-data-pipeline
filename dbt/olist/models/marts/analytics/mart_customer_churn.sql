@@ -28,9 +28,13 @@ select
     customer_last_order.customer_unique_id,
     customer_last_order.total_orders,
     customer_last_order.last_order_date,
-    reference_date.max_date::date - customer_last_order.last_order_date::date as days_since_last_order,
+    reference_date.max_date::date
+    - customer_last_order.last_order_date::date as days_since_last_order,
     case
-        when reference_date.max_date::date - customer_last_order.last_order_date::date > {{ var('churn_threshold_days') }} then 'At Risk'
+        when
+            reference_date.max_date::date - customer_last_order.last_order_date::date
+            > {{ var('churn_threshold_days') }}
+            then 'At Risk'
         else 'Active'
     end as churn_status
 from customer_last_order

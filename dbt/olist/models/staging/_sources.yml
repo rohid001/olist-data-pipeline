@@ -4,9 +4,21 @@ sources:
   - name: raw
     schema: raw
     description: Salinan CSV Olist, dimuat oleh ingestion/load_raw.py. Semua kolom bisnis bertipe TEXT.
+    config:
+      # Batch dimuat bulanan. Data dianggap basi bila batch terakhir lebih dari 35 hari lalu,
+      # dan gagal bila lebih dari 60 hari (dua jadwal bulanan terlewat)
+      loaded_at_field: _loaded_at
+      freshness:
+        warn_after: {count: 35, period: day}
+        error_after: {count: 60, period: day}
     tables:
       - name: orders
         description: Satu baris per order. Dipartisi menurut bulan order_purchase_timestamp.
+        columns:
+          - name: order_id
+            data_tests:
+              - unique
+              - not_null
       - name: order_items
         description: Satu per item di daalam order. Ikut batch order-nya.
       - name: order_payments

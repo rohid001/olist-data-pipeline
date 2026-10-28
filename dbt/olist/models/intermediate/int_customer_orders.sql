@@ -28,6 +28,6 @@ select
 from orders
 inner join customers
     on orders.customer_id = customers.customer_id
-left join totals 
+left join totals
     on orders.order_id = totals.order_id
 where orders.order_status = 'delivered'

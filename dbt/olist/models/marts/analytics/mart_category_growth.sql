@@ -30,7 +30,7 @@ category_yearly as (
     where
         orders.order_status = 'delivered'
         and extract(year from orders.order_purchase_timestamp) in (2017, 2018)
-    group by 1, 2
+    group by category, order_year
 
 ),
 

@@ -9,7 +9,7 @@ typed as (
 
     select
         order_id,
-        customer_id, 
+        customer_id,
         order_status,
         order_purchase_timestamp::timestamp as order_purchase_timestamp,
         order_approved_at::timestamp as order_approved_at,

@@ -1,5 +1,5 @@
 -- Satu baris per seller. Kode pos tetap teks supaya angka 0 di depan tidak hilang.
-with source as(
+with source as (
 
     select * from {{ source('raw', 'sellers') }}
 
@@ -18,4 +18,4 @@ typed as (
 
 )
 
-select * from typed 
+select * from typed

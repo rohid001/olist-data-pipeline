@@ -19,8 +19,7 @@ typed as (
         product_width_cm::int as product_width_cm,
         _batch_id,
         _loaded_at
-        from source
-
+    from source
 
 )
 

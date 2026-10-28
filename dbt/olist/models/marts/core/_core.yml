@@ -1,0 +1,71 @@
+version: 2
+
+# Test model dimensi dan fakta: grain (unique), dan setiap kunci di fakta harus
+# punya pasangan di dimensinya.
+models:
+  - name: dim_customers
+    description: Satu baris per customer_unique_id, alamat dari order terbaru.
+    columns:
+      - name: customer_unique_id
+        data_tests: 
+          - unique
+          - not_null
+  
+  - name: dim_products
+    description: Satu baris per produk, dengan kategori dalam Bahasa Inggris.
+    columns:
+      - name: product_id
+        data_tests:
+          - unique
+          - not_null
+      - name: product_category
+        data_tests:
+          - not_null
+  
+  - name : dim_sellers
+    description: Satu baris per seller.
+    columns:
+      - name: seller_id
+        data_tests:
+          - unique
+          - not_null
+  
+  - name: fct_orders
+    description: Satu baris per order. Incremental berdasarkan _loaded_at.
+    columns:
+      - name: order_id
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_unique_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_unique_id
+  
+  - name: fct_order_items
+    description: Satu baris per item di dalam order.
+    data_tests:
+      - unique:
+          arguments:
+            column_name: "order_id || '-' || order_item_id"
+    columns:
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('fct_orders')
+                field: order_id
+      - name: product_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_id
+      - name: seller_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_sellers')
+                field: seller_id

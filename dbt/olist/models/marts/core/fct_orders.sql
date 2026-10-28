@@ -14,8 +14,9 @@ with orders as (
 
     select * from {{ ref('stg_orders') }}
     {% if is_incremental() %}
-    -- {{ this }} = tabel fct_orders yang sudah ada di warehouse
-    where _loaded_at > (select max(_loaded_at) from {{ this }})
+        -- {{ this }} = tabel fct_orders yang sudah ada di warehouse
+        -- "noqa: RF02" di akhir baris berikut: abaikan aturan RF02, _loaded_at tidak ambigu
+        where _loaded_at > (select max(_loaded_at) from {{ this }}) -- noqa: RF02
     {% endif %}
 
 ),

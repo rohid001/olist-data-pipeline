@@ -8,7 +8,7 @@ with source as (
 typed as (
 
     select
-        order_id, 
+        order_id,
         payment_sequential::int as payment_sequential,
         payment_type,
         payment_installments::int as payment_installments,
@@ -16,7 +16,6 @@ typed as (
         _batch_id,
         _loaded_at
     from source
-
 
 )
 
