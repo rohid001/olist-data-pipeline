@@ -32,4 +32,7 @@ sources:
       - name: sellers
         description: Satu baris per seller, dimuat dengan upsert.
       - name: geolocation
-        description: Data referensi kode pos; banyk baris kembar, dimuat ulang penuh. 
+        description: Data referensi kode pos; banyk baris kembar, dimuat ulang penuh.
+        config:
+          # Tabel statis dimuat sekali, jadi tidak perlu dicek kesegarannya
+          freshness: null 

@@ -1,0 +1,3 @@
+# Image hanya butuh requirements.txt; kode, data, dan .env dipasang lewat volume.
+*
+!requirements.txt

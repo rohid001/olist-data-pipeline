@@ -78,10 +78,16 @@ models:
           - not_null
       - name: order_id
         data_tests:
+          # Saat replay bulanan, review yang dibuat sebelum bulan order-nya sempat tidak punya
+          # pasangan order sampai batch order-nya dimuat (paling banyak 12 baris). Jadi
+          # warn, dan baru error jika jumlahnya tidak wajar.
           - relationships:
               arguments:
                 to: ref('stg_orders')
                 field: order_id
+              config:
+                warn_if: ">0"
+                error_if: ">100"
       - name: review_score
         data_tests:
           - accepted_values:
