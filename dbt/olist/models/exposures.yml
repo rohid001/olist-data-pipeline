@@ -1,0 +1,27 @@
+version: 2
+
+# Exposure: pemakai data di luar dbt. Dengan ini dashboard Power BI muncul sebagai simpul
+# terakhir di lineage graph dbt docs, jadi terlihat mart mana saja yang dipakainya
+exposures:
+  - name: olist_powerbi_dashboard
+    label: Olist Business Dashboard (Power BI)
+    type: dashboard
+    maturity: high
+    url: https://github.com/rohid001/olist-data-pipeline/tree/main/dashboard
+    description : >
+      Dashboard 5 halaman (Overview, Customer RFM, Revenue Tren, Churn Risk, Kategori &
+      Wilayah) dari project DA, kini membaca tabel di schema marts lewat user bi_reader.
+    depends_on:
+      - ref('mart_overview_kpi')
+      - ref('mart_customer_rfm')
+      - ref('mart_buyer_type')
+      - ref('mart_revenue_monthly')
+      - ref('mart_seasonality')
+      - ref('mart_category_growth')
+      - ref('mart_customer_churn')
+      - ref('mart_review_churn')
+      - ref('mart_category_per_state')
+      - ref('mart_revenue_per_state')
+      - ref('mart_category_win_count')
+    owner:
+      name: Rohid

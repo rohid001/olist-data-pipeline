@@ -96,6 +96,17 @@ models:
       - name: customer_state
         data_tests:
           - not_null
+
+  - name: mart_category_win_count
+    description: Jumlah state yang kategori unggulannya (margin kasar terbesar) adalah kategori ini.
+    columns:
+      - name: category
+        data_tests:
+          - unique
+          - not_null
+      - name: state_count
+        data_tests:
+          - not_null
   
   - name: mart_revenue_per_state
     description: Revenue dan revenue per pelanggan tiap state (Q9)
