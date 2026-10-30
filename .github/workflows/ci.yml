@@ -38,7 +38,7 @@ jobs:
       WAREHOUSE_DB: olist_dw
       WAREHOUSE_USER: olist
       WAREHOUSE_PASSWORD: ci_only_password
-      DB_USE_COLORS: "false"
+      DBT_USE_COLORS: "false"
 
     steps:
       - name: Checkout repo
@@ -59,7 +59,7 @@ jobs:
       - name: Create warehouse schemas
         run: psql -h localhost -U olist -d olist_dw -v ON_ERROR_STOP=1 -f warehouse/init/01_create_schemas.sql
         env:
-          PGPASSWROD: ci_only_password
+          PGPASSWORD: ci_only_password
       
       - name: Lint SQL (sqlfluff)
-        run: sqlfluff lint dbt/olist/models dbt/olist/test
+        run: sqlfluff lint dbt/olist/models dbt/olist/tests
