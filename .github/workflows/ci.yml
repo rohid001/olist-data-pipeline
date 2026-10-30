@@ -63,3 +63,22 @@ jobs:
       
       - name: Lint SQL (sqlfluff)
         run: sqlfluff lint dbt/olist/models dbt/olist/tests
+
+      - name: Load sample data into raw
+        run: |
+          mkdir -p data/source
+          cp tests/fixtures/olist_sample/*.csv data/source/
+          python -m ingestion.partition --all
+          python -m ingestion.load_raw --all
+
+      - name: dbt build
+        working-directory: dbt/olist
+        run: dbt build
+
+      # Jalankan ulang satu bulan, persis seperti rerun di Airflow. Ini menguji jalur
+      # incremental fct_orders (is_incremental() = true) yang tidak tersentuh build pertama.
+
+      - name: Rerun one month (incremental month)
+        run: |
+          python -m ingestion.load_raw --month 2017-11
+          cd dbt/olist && dbt build --select fct_orders*
