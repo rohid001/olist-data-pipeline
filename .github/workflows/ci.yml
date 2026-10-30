@@ -81,4 +81,4 @@ jobs:
       - name: Rerun one month (incremental month)
         run: |
           python -m ingestion.load_raw --month 2017-11
-          cd dbt/olist && dbt build --select fct_orders*
+          cd dbt/olist && dbt build --select fct_orders+
