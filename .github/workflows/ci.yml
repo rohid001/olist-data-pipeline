@@ -1,0 +1,31 @@
+# CI: setiap push ke main dan setiap pull request, GitHub menjalanka unit test.
+# lint SQL, lalu seluruh pipeline (partisi -> load raw -> dbt build) di atas sample data
+# kecil (tests/fixtures/olist_sample) dan PostgreSQL sementara.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: # tombol "Run workflow" di tab Actions
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-24.04
+    timeout_minutes: 15
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Set up python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Unit test (pytest)
+        run: python -m pytest -v

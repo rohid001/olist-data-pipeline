@@ -14,7 +14,7 @@ from sqlalchemy import URL, Engine, create_engine, text
 ROOT_DIR = Path(__file__).resolve().parent.parent
 ENV_FILE = ROOT_DIR / ".env"
 
-VARIABEL_WAJIB = [
+REQUIRED_VARS = [
     "WAREHOUSE_HOST",
     "WAREHOUSE_PORT",
     "WAREHOUSE_DB",
@@ -23,17 +23,22 @@ VARIABEL_WAJIB = [
 ]
 
 def get_settings() -> dict:
-    """Baca .env, cek semua variabel wajib terisi, lalu kembalikan sebagai dict."""
-    if not ENV_FILE.exists():
-        raise FileNotFoundError(
-            f"File .env tidak ditemukan di {ENV_FILE}. "
-            "Salin .env.example menjadi env lalu isi password-nya."
-        )
+    """Ambil pengaturan warehouse dari environtment variable, lalu kembalikan sebagai dict.
+    
+    Di PC/Laptop nilainya berasal dari file .env. Di CI (Github Actions) tidak ada file .env;
+    workflow mengisi variabel yang sama langsung sebagai environtment variable.
+    """
+    # Bila .env tidak ada, load_dotenv diam saja. override=False (bawaan): variabel yang
+    # sudah ada di environment (dari CI atau docker-compose) tidak ditimpa isi .env.
     load_dotenv(ENV_FILE)
     
-    belum_diisi = [nama for nama in VARIABEL_WAJIB if not os.getenv(nama)]
-    if belum_diisi:
-        raise ValueError(f"Variabel ini belum diisi di .env {', '.join(belum_diisi)}")
+    missing = [name for name in REQUIRED_VARS if not os.getenv(name)]
+    
+    if missing:
+        raise ValueError(
+            f"Missing settings: {', '.join(missing)}. "
+            "Copy .env.example to .env and fill in the values."
+        )
     
     return {
         "host": os.getenv("WAREHOUSE_HOST"),
