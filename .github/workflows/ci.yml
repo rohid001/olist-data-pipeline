@@ -14,6 +14,32 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
 
+    # Warehouse sementara: dibuat saat job mulai dan dihapus saat job selesai
+    services:
+      warehouse:
+        image: postgres:18
+        env:
+          POSTGRES_DB: olist_dw
+          POSTGRES_USER: olist
+          POSTGRES_PASSWORD: ci_only_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U olist -d olist_dw"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # Pengganti .env di CI. Password ini bukan rahasia: hanya berlaku untuk database
+    # sementara di atas, yang tidak bisa diakses dari luar dan hilang setelah job selesai.
+    env:
+      WAREHOUSE_HOST: localhost
+      WAREHOUSE_PORT: "5432"
+      WAREHOUSE_DB: olist_dw
+      WAREHOUSE_USER: olist
+      WAREHOUSE_PASSWORD: ci_only_password
+      DB_USE_COLORS: "false"
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
@@ -27,5 +53,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Unit test (pytest)
+      - name: Unit tests (pytest)
         run: python -m pytest -v
+      
+      - name: Create warehouse schemas
+        run: psql -h localhost -U olist -d olist_dw -v ON_ERROR_STOP=1 -f warehouse/init/01_create_schemas.sql
+        env:
+          PGPASSWROD: ci_only_password
+      
+      - name: Lint SQL (sqlfluff)
+        run: sqlfluff lint dbt/olist/models dbt/olist/test
