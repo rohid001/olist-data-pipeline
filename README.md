@@ -10,7 +10,7 @@
 *Bahasa Indonesia: [README.id.md](README.id.md)*
 
 A monthly batch ELT pipeline for the [Olist Brazilian E-Commerce dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
-(99,441 orders, Sep 2016 – Oct 2018). It turns my earlier Data Analyst project,
+(99,441 orders placed Sep 2016 – Oct 2018; the delivered orders used in the analysis run to Aug 2018). It turns my earlier Data Analyst project,
 [olist-sql-dashboard](https://github.com/rohid001/olist-sql-dashboard), from SQL files run by hand into
 an automated, tested pipeline: Python ingestion → PostgreSQL → dbt → Airflow → Power BI, all started with
 `docker compose up`.

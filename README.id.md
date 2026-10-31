@@ -3,7 +3,7 @@
 *English: [README.md](README.md) (versi lengkap)*
 
 Pipeline ELT batch bulanan untuk dataset [Olist Brazilian E-Commerce](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
-(99.441 order, September 2016 – Oktober 2018). Project ini melanjutkan project Data Analyst saya,
+(99.441 order dari September 2016 – Oktober 2018; order berstatus delivered yang dipakai analisis berakhir Agustus 2018). Project ini melanjutkan project Data Analyst saya,
 [olist-sql-dashboard](https://github.com/rohid001/olist-sql-dashboard): query SQL yang dulu dijalankan
 satu per satu kini menjadi pipeline otomatis yang teruji, yaitu ingestion Python → PostgreSQL → dbt →
 Airflow → Power BI, dan seluruhnya dinyalakan dengan `docker compose up`.
