@@ -2,11 +2,13 @@
 
 *English: [README.md](README.md) (versi lengkap)*
 
+**Dashboard online:** <https://olist-data-pipeline.streamlit.app> · **dbt docs online:** <https://rohid001.github.io/olist-data-pipeline/dbt/>
+
 Pipeline ELT batch bulanan untuk dataset [Olist Brazilian E-Commerce](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
 (99.441 order dari September 2016 – Oktober 2018; order berstatus delivered yang dipakai analisis berakhir Agustus 2018). Project ini melanjutkan project Data Analyst saya,
 [olist-sql-dashboard](https://github.com/rohid001/olist-sql-dashboard): query SQL yang dulu dijalankan
 satu per satu kini menjadi pipeline otomatis yang teruji, yaitu ingestion Python → PostgreSQL → dbt →
-Airflow → Power BI, dan seluruhnya dinyalakan dengan `docker compose up`.
+Airflow → Power BI dan Streamlit, dan seluruhnya dinyalakan dengan `docker compose up`.
 
 ## Hasil utama
 
@@ -18,17 +20,19 @@ Airflow → Power BI, dan seluruhnya dinyalakan dengan `docker compose up`.
 | Batch bulanan | tidak ada | 26 dari 26 run Airflow sukses, termasuk bulan kosong (November 2016) |
 | Durasi backfill penuh | tidak terukur | 7 menit 59,9 detik di PC (sekitar 18,5 detik per bulan) |
 | Idempotensi | load ulang = data dobel | menjalankan ulang satu bulan: 0 perubahan jumlah baris |
-| Test otomatis | 0 | 71 data test dbt + 9 unit test pytest; 0 error, 2 warning yang disengaja; sqlfluff 0 pelanggaran |
+| Test otomatis | 0 | 71 data test dbt + 13 test pytest (9 unit test, 4 smoke test dashboard); 0 error, 2 warning yang disengaja; sqlfluff 0 pelanggaran |
 | CI | tidak ada | GitHub Actions di setiap push, sekitar 1 menit 16 detik |
 | Akses BI | akun pemilik database | user `bi_reader` yang hanya bisa membaca `marts` |
+| Akses publik ke hasil | file Power BI yang hanya bisa dibuka di Windows | dashboard Streamlit publik dan situs dbt docs, tanpa instalasi |
 
 ## Isi project
 
 - **Ingestion Python**: partisi bulanan dan load ke schema `raw` yang idempotent (delete-insert dan upsert).
-- **dbt**: 27 model berlapis (staging, intermediate, marts), model incremental, 71 test, dan exposure dashboard.
+- **dbt**: 27 model berlapis (staging, intermediate, marts), model incremental, 71 test, dan 2 exposure (dashboard Power BI dan Streamlit).
 - **Airflow 3**: DAG bulanan dengan backfill 26 bulan, retry, dan cek kesegaran data.
-- **CI GitHub Actions**: pytest, lint SQL, dan `dbt build` di atas sampel 445 order.
+- **CI GitHub Actions**: pytest (termasuk smoke test dashboard Streamlit), lint SQL, dan `dbt build` di atas sampel 445 order.
 - **Power BI**: dashboard 5 halaman dari project DA, kini membaca schema `marts` lewat user read-only.
+- **Streamlit**: 5 halaman yang sama sebagai dashboard web publik di Streamlit Community Cloud, membaca snapshot `marts` dalam format Parquet hasil `scripts/export_marts.py`.
 
 Cara menjalankan, arsitektur, dan keterbatasan project ada di [README.md](README.md).
 
