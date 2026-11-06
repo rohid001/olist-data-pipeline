@@ -14,7 +14,7 @@
 A monthly batch ELT pipeline for the [Olist Brazilian E-Commerce dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
 (99,441 orders placed Sep 2016 – Oct 2018; the delivered orders used in the analysis run to Aug 2018). It turns my earlier Data Analyst project,
 [olist-sql-dashboard](https://github.com/rohid001/olist-sql-dashboard), from SQL files run by hand into
-an automated, tested pipeline: Python ingestion → PostgreSQL → dbt → Airflow → Power BI, all started with
+an automated, tested pipeline: Python ingestion → PostgreSQL → dbt → Airflow → Power BI and Streamlit, all started with
 `docker compose up`.
 
 The business logic (RFM segments, revenue trend, churn, category and region analysis) is the same as in
@@ -71,7 +71,9 @@ flowchart TB
   check, `dbt build`. `catchup=True` with `max_active_runs=1` replays all 26 months in order.
 - **Serving (Power BI).** The original 5-page dashboard now reads `marts` tables through a read-only
   user. The dashboard is registered as a dbt exposure, so it appears at the end of the lineage graph.
-- **Serving (public web).** scripts/export_marts.py exports the 11 marts used by the dashboard to Parquet files in app/data/; a Streamlit app with the same 5 pages reads them and is hosted for free on Streamlit Community Cloud.
+- **Serving (public web).** `scripts/export_marts.py` exports the 11 marts used by the dashboard to
+  Parquet files in `app/data/`; a Streamlit app with the same 5 pages reads them and is hosted for free
+  on Streamlit Community Cloud. It is registered as a second dbt exposure.
 
 ![dbt lineage from raw tables to the Power BI dashboard](docs/lineage.png)
 
@@ -101,12 +103,14 @@ flowchart TB
 ## CI
 
 On every push to `main` and every pull request, GitHub Actions starts a temporary PostgreSQL 18 service
-and runs: pytest(including a headless smoke test of the Streamlit app) → sqlfluff lint → load a 445-order sample (all 26 months, in `tests/fixtures/`) →
-`dbt build` → re-run one month to exercise the incremental path of `fct_orders`.
+and runs: pytest (including a headless smoke test of the Streamlit app) → sqlfluff lint → load a
+445-order sample (all 26 months, in `tests/fixtures/`) → `dbt build` → re-run one month to exercise the
+incremental path of `fct_orders`.
 
 ## Dashboard
 
-The same 5 pages are available as a public web app: <https://olist-data-pipeline.streamlit.app>. Power BI screenshots:
+The same 5 pages are available as a public web app: <https://olist-data-pipeline.streamlit.app>.
+Power BI screenshots:
 
 | Overview | Customer RFM |
 | --- | --- |
@@ -151,7 +155,13 @@ dbt docs generate
 dbt docs serve --port 8081            # lineage graph at http://localhost:8081
 ```
 
-python -m scripts.export_marts, pip install -r app/requirements.txt, streamlit run app/streamlit_app.py
+To refresh and run the public dashboard locally:
+
+```powershell
+python -m scripts.export_marts           # marts -> app/data/*.parquet
+pip install -r app/requirements.txt
+streamlit run app/streamlit_app.py      # http://localhost:8501
+```
 
 Without Airflow, the same pipeline runs by hand: `python -m ingestion.partition --all`,
 `python -m ingestion.load_raw --all`, then `dbt build` from `dbt\olist`.
@@ -164,9 +174,9 @@ olist-data-pipeline/
 ├── Dockerfile                # Airflow image with a separate venv for the pipeline
 ├── ingestion/                # config, data contract, download, partition, load_raw
 ├── scripts/                  # regression check, CI sample builder, bi_reader setup, mart export
-├── dbt/olist/                # dbt project: models, seed, tests, exposure
-├── airflow/dags/             # monthly pipeline + static reference DAG
 ├── app/                      # public Streamlit dashboard + Parquet snapshot of the marts
+├── dbt/olist/                # dbt project: models, seed, tests, 2 exposures
+├── airflow/dags/             # monthly pipeline + static reference DAG
 ├── tests/                    # pytest unit tests + CI sample data
 ├── .github/workflows/ci.yml  # GitHub Actions
 ├── dashboard/                # Power BI file + screenshots
@@ -182,7 +192,8 @@ olist-data-pipeline/
   cloud deployment, to keep the project free.
 - **CI uses a sample.** CI checks the code on 445 orders. Full-data checks (regression against the DA
   results, full backfill) run locally, because the DA CSV exports are not in this repository.
-- **Dashboard snapshot.** The public dashboard reads a Parquet snapshot committed to the repo, so it shows new data only after export_marts.py is re-run and the files are pushed.
+- **Dashboard snapshot.** The public dashboard reads a Parquet snapshot committed to the repo, so it
+  shows new data only after `export_marts.py` is re-run and the files are pushed.
 - **Power BI.** Import mode with a manual refresh; Power BI Desktop runs on Windows only. Column names in
   the report keep the original Indonesian names through a rename step in Power Query.
 - **Data license.** The Olist dataset is CC BY-NC-SA 4.0 (non-commercial). The data is already anonymised.
