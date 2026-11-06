@@ -25,3 +25,26 @@ exposures:
       - ref('mart_category_win_count')
     owner:
       name: Rohid
+  
+  - name: olist_streamlit_dashboard
+    label: Olist Public Dashboard (Streamlit)
+    type: application
+    maturity: high
+    url: https://olist-data-pipeline.streamlit.app
+    description: >
+      Versi web publik dari dashboard Power BI dengan 5 halaman yang sama. Membaca snapshot
+      Parquet hasil scripts/export_marts.py, di-hosting di Streamlit Community Cloud.
+    depends_on:
+      - ref('mart_overview_kpi')
+      - ref('mart_customer_rfm')
+      - ref('mart_buyer_type')
+      - ref('mart_revenue_monthly')
+      - ref('mart_seasonality')
+      - ref('mart_category_growth')
+      - ref('mart_customer_churn')
+      - ref('mart_review_churn')
+      - ref('mart_category_per_state')
+      - ref('mart_revenue_per_state')
+      - ref('mart_category_win_count')
+    owner:
+      name: Rohid

@@ -1,0 +1,5 @@
+# Depedency dashboard Streamlit saja. Streamlit Community Cloud memakai file ini (bukan)
+# requirements.txt di root) karena letaknya di folder yang sama dengan streamlit_app.py.
+streamlit==1.66.1
+pandas==3.0.6
+pyarrow==26.0.1

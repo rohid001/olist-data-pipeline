@@ -51,7 +51,9 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run:  | 
+          pip install -r requirements.txt
+          pip install -r app/requirements.txt
 
       - name: Unit tests (pytest)
         run: python -m pytest -v

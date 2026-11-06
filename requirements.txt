@@ -4,6 +4,7 @@ SQLAlchemy==2.1.5
 psycopg2-binary==2.9.13
 python-dotenv==1.2.4
 kagglehub==1.0.2
+pyarrow==26.0.1     # exports marts ke Parquet untuk dashboard Streamlit (Pengembangan 1 / P1)
 
 # Transformasi (dikunci di v1: dbt v2 belum mendukung PostgreSQL)
 dbt-core==1.12.6
