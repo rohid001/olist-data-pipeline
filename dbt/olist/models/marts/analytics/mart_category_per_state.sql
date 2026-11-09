@@ -46,7 +46,7 @@ ranked as (
 select
     customer_state,
     category,
-    round(gross_margin, 2) as gross_margin,
+    round(gross_margin, 1) as gross_margin,
     round(revenue, 2) as revenue
 from ranked
 where margin_rank = 1
