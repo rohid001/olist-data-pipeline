@@ -36,7 +36,7 @@ def create_raw_tables(cur) -> None:
         if spec["load_strategy"] == "delete_insert":
             # Index supaya DELETE ... WHERE _batch_id = ... tidak membaca seluruh tabel
             cur.execute(f"CREATE INDEX IF NOT EXISTS ix_{table}_batch_id ON raw.{table}(_batch_id)")
-            
+
 def count_rows(cur) -> dict:
     """Jumlah baris tiap tabel raw, untuk membuktikan hasil load."""
     counts = {}
@@ -51,21 +51,21 @@ def load_table(cur, table: str, batch_id: str, path) -> int:
     spec = CONTRACT[table]
     columns = ", ".join(spec["columns"])
     temp_table = f"tmp_{table}"
-    
+
     # 1. Salin file ke tabel sementara (hilang otomatis saat transaksi selesai)
     cur.execute(f"CREATE TEMP TABLE {temp_table} ({', '.join(f'{c} TEXT' for c in spec['columns'])}) "
                 "ON COMMIT DROP")
     with open(path, encoding="utf-8") as file:
         # HEADER MATCH: PostgreSQL menolak file bila nama kolom di header tidak sama dengan tabel
         cur.copy_expert(f"COPY {temp_table} FROM STDIN WITH (FORMAT csv, HEADER MATCH)", file)
-    
+
     # 2. Pindahkan ke tabel raw sesuai strategi
     strategy = spec["load_strategy"]
     if strategy == "delete_insert":
         cur.execute(f"DELETE FROM raw.{table} WHERE _batch_id = %s", (batch_id,))
     elif strategy == "full_replace":
         cur.execute(f"TRUNCATE raw.{table}")
-    
+
     insert = (f"INSERT INTO raw.{table} ({columns}, _batch_id, _source_file) "
               f"SELECT {columns}, %s, %s FROM {temp_table}")
     if strategy == "upsert":
@@ -73,7 +73,7 @@ def load_table(cur, table: str, batch_id: str, path) -> int:
         updates += ["_batch_id = EXCLUDED._batch_id", "_source_file = EXCLUDED._source_file",
                     "_loaded_at = EXCLUDED._loaded_at"]
         insert += f" ON CONFLICT ({', '.join(spec['key'])}) DO UPDATE SET {', '.join(updates)}"
-    
+
     source_file = path.relative_to(ROOT_DIR).as_posix()
     cur.execute(insert, (batch_id, source_file))
     return cur.rowcount
@@ -93,7 +93,7 @@ def load_batch(engine, month: str) -> dict:
         raise
     finally:
         conn.close()
-    
+
 #----------------------------------------------------------------Tahap C
 def load_static(engine) -> dict:
     """Muat tabel statis (geolocation) dengan full_replace dalam satu transaksi."""
@@ -101,7 +101,8 @@ def load_static(engine) -> dict:
     try:
         cur = conn.cursor()
         create_raw_tables(cur)
-        written = {table: load_table(cur, table, "static", LANDING_DIR / table / "static" / f"{table}.csv") for table in STATIC_TABLES}
+        written = {table: load_table(cur, table, "static", LANDING_DIR / table / "static" /
+                                     f"{table}.csv") for table in STATIC_TABLES}
         conn.commit()
         return written
     except Exception:
@@ -109,7 +110,7 @@ def load_static(engine) -> dict:
         raise
     finally:
         conn.close()
-        
+
 def print_counts(engine) -> None:
     """Cetak jumlah baris akhir semua tabel raw."""
     conn = engine.raw_connection()
@@ -118,7 +119,7 @@ def print_counts(engine) -> None:
             print(f"raw.{table:<16} {rows:>10,}")
     finally:
         conn.close()
-        
+
 def parse_args() -> argparse.Namespace:
     """Baca argumen baris perintah: tepat satu dari --month, --static, --all."""
     parser = argparse.ArgumentParser(description="Load landing partitions into the raw schema.")
@@ -127,13 +128,13 @@ def parse_args() -> argparse.Namespace:
     group.add_argument("--static", action="store_true", help="static tables only")
     group.add_argument("--all", action="store_true", help="all batch months plus static tables")
     return parser.parse_args()
-    
+
 if __name__ == "__main__":
     args = parse_args()
     if args.month and args.month not in batch_months():
         print(f"Month {args.month} is outside the batch range {FIRST_MONTH} to {LAST_MONTH}")
         sys.exit(1)
-    
+
     engine = get_engine()
     months = [args.month] if args.month else (batch_months() if args.all else [])
     for month in months:
@@ -142,6 +143,6 @@ if __name__ == "__main__":
     if args.static or args.all:
         for table, rows in load_static(engine).items():
             print(f"Static {table} loaded: {rows:,} rows written")
-    
+
     print("Row counts in raw:")
     print_counts(engine)

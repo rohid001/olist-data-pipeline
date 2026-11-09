@@ -36,7 +36,7 @@ BASELINES = {
     "mart_revenue_monthly": {
         "file": "q3_monthly_revenue.csv",
         "key": ["month"],
-        "rename": {"bulan": "month", "revenue_bulan_sebelumnya": 
+        "rename": {"bulan": "month", "revenue_bulan_sebelumnya":
             "previous_month_revenue"},
     },
     "mart_seasonality": {
@@ -107,23 +107,23 @@ def parse_args() -> argparse.Namespace:
 #----------------------------------------------------------------Tahap B
 def normalize_column(values: pd.Series) -> pd.Series:
     """Ubah satu kolom ke bentuk yang bisa dibandingkan, apa pun format asalnya.
-    
+
     Angka -> dibulatkan 2 desimal, tanggal -> teks 'YYYY-MM-DD HH:MM:SS', teks -> tanpa
     spasi di awal dan akhir. CSV DBeavar dan hasil query bisa beda format
     (misalnya '2016-09-15 12:16:38.000' vs datetime), tapi isinya tetap sama.
     """
     text = values.astype("string").str.strip()
     filled = text.notna().sum()
-    
+
     numbers = pd.to_numeric(text, errors="coerce")
     if numbers.notna().sum() == filled:
         return numbers.astype("Float64").round(2)
-    
+
     # Hanya kolom yang semua isinya diawali pola tanggal YYYY-MM-DD yang diubah ke tanggal
     if text.str.match(r"\d{4}-\d{2}-\d{2}").sum() == filled:
         dates = pd.to_datetime(text, format="ISO8601")
         return dates.dt.strftime("%Y-%m-%d %H:%M-%S")
-    
+
     return text
 
 def compare(baseline: pd.DataFrame, mart: pd.DataFrame, key: list) -> dict:
@@ -131,7 +131,7 @@ def compare(baseline: pd.DataFrame, mart: pd.DataFrame, key: list) -> dict:
     missing_columns = [c for c in baseline.columns if c not in mart.columns]
     if missing_columns:
         raise KeyError(f"Columns not found in mart: {', '.join(missing_columns)}")
-    
+
     expected = baseline.apply(normalize_column)
     actual = mart[list(baseline.columns)].apply(normalize_column)
     if key:
@@ -139,13 +139,13 @@ def compare(baseline: pd.DataFrame, mart: pd.DataFrame, key: list) -> dict:
         actual = actual.set_index(key)
     expected = expected.sort_index()
     actual = actual.sort_index()
-    
+
     common = expected.index.intersection(actual.index)
     left = expected.loc[common]
     right = actual.loc[common]
     # Sel dianggap sama bila nilainya sama atau keduanya kosong (NULL)
     different = ~((left == right) | (left.isna() & right.isna()))
-    
+
     return {
         "baseline_rows": len(expected),
         "mart_rows": len(actual),
@@ -153,7 +153,7 @@ def compare(baseline: pd.DataFrame, mart: pd.DataFrame, key: list) -> dict:
         "only_in_mart": len(actual.index.difference(expected.index)),
         "different_cells": int(different.to_numpy().sum()),
     }
-    
+
 def is_match(result: dict) -> bool:
     """Cocok = jumlah baris sama, tidak ada kunci yang hilang/lebih, dan 0 sel berbeda."""
     return (result["baseline_rows"] == result["mart_rows"]
@@ -188,14 +188,14 @@ def check_all(engine, baseline_dir: Path) -> dict:
             continue
         current = read_mart(engine, mart)
         results[mart] = {"source": spec["file"], **compare(baseline, current, spec["key"])}
-        
+
     overview = pd.DataFrame([OVERVIEW_BASELINE])
     results["mart_overview_kpi"] = {
         "source": "OVERVIEW_BASELINE",
         **compare(overview, read_mart(engine, "mart_overview_kpi"), []),
     }
     return results
-    
+
 def write_report(results: dict) -> None:
     """Tulis hasil perbandingan ke docs/regression_report.md"""
     lines = [
@@ -226,13 +226,13 @@ def write_report(results: dict) -> None:
     REPORT_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
 if __name__ == "__main__":
-    
+
     args = parse_args()
     if not args.baseline_dir.is_dir():
         print(f"Baseline folder not found: {args.baseline_dir}")
         sys.exit(1)
     results = check_all(get_engine(), args.baseline_dir)
-    
+
     for mart, r in results.items():
         if "error" in r:
             print(f"{mart:<26} {r['error']} ({r['source']})")
@@ -240,7 +240,7 @@ if __name__ == "__main__":
         status = get_status(mart, r)
         print(f"{mart:<26} {r['baseline_rows']:>7,} vs {r['mart_rows']:>7,} rows "
               f"{r['different_cells']:>6,} different cells  {status}")
-    
+
     write_report(results)
     statuses = [get_status(m, r) if "error" not in r else "ERROR" for m, r in results.items()]
     print(f"{statuses.count('MATCH')} of {len(results)} marts match the DA baseline; "
@@ -249,4 +249,3 @@ if __name__ == "__main__":
     # Gagal (exit 1) bila ada mart yang berbeda tanpa penjelasan atau CSV-nya tidak ada
     failed = statuses.count("DIFFERENT") + statuses.count("ERROR")
     sys.exit(1 if failed else 0)
-        

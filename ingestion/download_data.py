@@ -9,8 +9,8 @@ python -m ingestion.download_data --from-dri <folder> (salin dari folder lokal, 
 
 import argparse
 import shutil
-
 from pathlib import Path
+
 from ingestion.config import ROOT_DIR
 from ingestion.data_contract import CONTRACT
 
@@ -21,7 +21,7 @@ def download_datase() -> Path:
     """Unduh dataset (atau pakai cache kagglehub bila sudah pernah diunduh), kembalikan foldernya"""
     #import di dalam fungsi: mode --from-dir tetap jalan walau Kaggle tidak bisa diakses
     import kagglehub
-    
+
     return Path(kagglehub.dataset_download(DATASET_HANDLE))
 
 def copy_source_files(download_dir: Path) -> list:
@@ -29,7 +29,7 @@ def copy_source_files(download_dir: Path) -> list:
     missing = [spec["file"] for spec in CONTRACT.values() if not (download_dir / spec["file"]).exists()]
     if missing:
         raise FileNotFoundError(f"Not found in {download_dir}: {', '.join(missing)}")
-    
+
     SOURCE_DIR.mkdir(parents=True, exist_ok=True)
     copied = []
     for spec in CONTRACT.values():
@@ -46,12 +46,12 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = parse_args()
-    
+
     # Uji Tahap A: dapatkan folder berisi CSV (dari Kaggle atau folder lokal)
     download_dir = args.from_dir if args.from_dir else download_datase()
     print("Source folder:", download_dir)
     print(f"{len(list(download_dir.glob('*.csv')))} CSV files found")
-    
+
     # Uji Tahap B: salin 9 file sesuai kontrak ke data/source
     copied = copy_source_files(download_dir)
     for path in copied:

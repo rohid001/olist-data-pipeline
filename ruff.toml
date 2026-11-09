@@ -1,0 +1,9 @@
+# Aturan lint python (ruff). Dipakai oleh pre-commit dan bisa dijalankan langsung:
+#   ruff check .
+line-length = 120
+target-version = "py312"
+
+[lint]
+# E/W: gaya pycodestyle, F: pyflakes (import tidak terpakai, nama tidak terdefinisi),
+# I: urutan import (isort)
+select = ["E", "F", "W", "I"]

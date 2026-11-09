@@ -25,7 +25,7 @@ exposures:
       - ref('mart_category_win_count')
     owner:
       name: Rohid
-  
+
   - name: olist_streamlit_dashboard
     label: Olist Public Dashboard (Streamlit)
     type: application

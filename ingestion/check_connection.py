@@ -30,7 +30,7 @@ def list_schemas(engine) -> list[str]:
                  """)
     with engine.connect() as conn:
         return [row[0] for row in conn.execute(query)]
-    
+
 def find_missing_schemas(schemas: list[str]) -> list[str]:
     """Kembalikan schema wajib yang belum ada di warehouse."""
     return [name for name in REQUIRED_SCHEMAS if name not in schemas]
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         print("GAGAL terhubung ke warehouse.")
         print("Cek: container berjalan? port di .env = 5433? password sama?")
         sys.exit(1)
-    
+
     # Uji Tahap B: 4 schema layer dari warehouse/init sudah dibuat
     schemas = list_schemas(engine)
     print("Schema :", ", ".join(schemas))

@@ -56,7 +56,7 @@ if __name__ == "__main__":
     if not password:
         print("BI_READER_PASSWORD is empty. Add it to .env first.")
         sys.exit(1)
-    
+
     conn = get_engine().raw_connection()
     try:
         cur = conn.cursor()
@@ -66,4 +66,3 @@ if __name__ == "__main__":
     finally:
         conn.close()
     print(f"Role {ROLE} {action}; read access granted on schema {SCHEMA}")
-    

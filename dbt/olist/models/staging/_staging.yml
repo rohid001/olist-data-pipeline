@@ -94,7 +94,7 @@ models:
               arguments:
                 values: [1, 2, 3, 4, 5]
                 quote: false
-  
+
   - name: stg_customers
     columns:
       - name: customer_id
@@ -104,7 +104,7 @@ models:
       - name: customer_unique_id
         data_tests:
           - not_null
-  
+
   - name: stg_products
     columns:
       - name: product_id
@@ -122,16 +122,16 @@ models:
   - name: stg_sellers
     columns:
       - name: seller_id
-        data_tests: 
+        data_tests:
           - unique
           - not_null
-  
+
   - name: stg_geolocation
     columns:
       - name: geolocation_zip_code_prefix
         data_tests:
           - not_null
-  
+
   - name: stg_product_category_name_translation
     columns:
       - name: product_category_name

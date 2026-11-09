@@ -1,0 +1,24 @@
+# Pemeriksaan otomatis sebelum setiap commit (pre-commit). Pasang sekali per-clone:
+#   pre-commit install
+# Jalankan manual ke semua file:
+#   pre-commit run --all-files
+# File data dan hasil generate tidak ikut diperiksa
+exclude: ^(tests/fixtures/|app/data/|dbt/olist/seeds/)
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: ["--maxkb=10000"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.1
+    hooks:
+      - id: ruff-check
+        args: ["--fix"]

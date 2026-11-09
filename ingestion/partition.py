@@ -10,6 +10,7 @@ Jalankan dari root repo:
     python -m ingestion.partition --all
 """
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -18,8 +19,12 @@ import pandas as pd
 from ingestion.config import ROOT_DIR
 from ingestion.data_contract import CONTRACT, FIRST_MONTH, LAST_MONTH
 
-SOURCE_DIR = ROOT_DIR / "data" / "source"
-LANDING_DIR = ROOT_DIR / "data" / "landing"
+# Folder data bawaan adalah data/di root repo. Environtment variable OLIST_DATA_DIR bisa
+# memindahkannya (relatif terhadap root repo), misalnya ke data_ci/ untuk menjalankan pipeline
+# di atas sampel CI tanpa menimpa asli di data/source.
+DATA_DIR = ROOT_DIR / os.getenv("OLIST_DATA_DIR", "data")
+SOURCE_DIR = DATA_DIR / "source"
+LANDING_DIR = DATA_DIR / "landing"
 TIMESTAMP_PATTERN  = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}"
 
 MONTHLY_TABLES = [t for t, s in CONTRACT.items() if s["partition_type"] in ("time_column", "parent_table")]
@@ -66,7 +71,7 @@ def write_csv(df: pd.DataFrame, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     # lineterminator="\n": akhir baris LF di semua OS; tanpa ini Windows menulis CRLF
     df.to_csv(path, index=False, encoding="utf-8", lineterminator="\n")
-    
+
 def write_month(data: dict, month: str) -> dict:
     """Tulis partisi semua table bulanan untuk satu batch; kembalikan jumlah baris per table."""
     counts = {}
@@ -104,15 +109,15 @@ if __name__ == "__main__":
     if args.month and args.month not in batch_months():
         print(f"Month {args.month} is outside the batch range {FIRST_MONTH} to {LAST_MONTH}")
         sys.exit(1)
-        
+
     data = load_sources()
-    
+
     if args.month:
         counts = write_month(data, args.month)
         for table, rows in counts.items():
             print(f"{table:<16} {rows:>8,}")
-        print(f"Batch {args.month} written to data/landing")
-        
+        print(f"Batch {args.month} written to {LANDING_DIR.relative_to(ROOT_DIR).as_posix()}")
+
     if args.all:
         totals = {table: 0 for table in MONTHLY_TABLES}
         for month in batch_months():
@@ -120,8 +125,8 @@ if __name__ == "__main__":
                 totals[table] += rows
         for table, rows in totals.items():
             print(f"{table:<16} {rows:>8,}")
-        print(f"{len(batch_months())} batches written to data/landing")
-        
+        print(f"{len(batch_months())} batches written to {LANDING_DIR.relative_to(ROOT_DIR).as_posix()}")
+
     if args.static or args.all:
         for table, rows in write_static(data).items():
             print(f"{table:<16} {rows:>8,}  (static)")

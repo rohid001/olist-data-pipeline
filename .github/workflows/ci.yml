@@ -1,6 +1,7 @@
-# CI: setiap push ke main dan setiap pull request, GitHub menjalanka unit test.
+# CI: setiap push ke main dan setiap pull request, GitHub menjalankan pre-commit, unit test.
 # lint SQL, lalu seluruh pipeline (partisi -> load raw -> dbt build) di atas sample data
-# kecil (tests/fixtures/olist_sample) dan PostgreSQL sementara.
+# kecil (tests/fixtures/olist_sample) dan PostgreSQL sementara, lalu mencocokkan isi mart
+# dengan snapshot. Push ke main juga menerbitkan dbt docs ke Github Pages.
 name: CI
 
 on:
@@ -51,18 +52,21 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run:  | 
+        run:  |
           pip install -r requirements.txt
           pip install -r app/requirements.txt
 
+      - name: Pre-commit check
+        run: pre-commit run --all-files --show-diff-on-failure
+
       - name: Unit tests (pytest)
         run: python -m pytest -v
-      
+
       - name: Create warehouse schemas
         run: psql -h localhost -U olist -d olist_dw -v ON_ERROR_STOP=1 -f warehouse/init/01_create_schemas.sql
         env:
           PGPASSWORD: ci_only_password
-      
+
       - name: Lint SQL (sqlfluff)
         run: sqlfluff lint dbt/olist/models dbt/olist/tests
 
@@ -84,3 +88,63 @@ jobs:
         run: |
           python -m ingestion.load_raw --month 2017-11
           cd dbt/olist && dbt build --select fct_orders+
+
+      # Golden test: isi 11 mart dashboard harus sama dengan snapshot di
+      # tests/fixtures/expected_marts. Dijalankan sesudah rerun, jadi sekaligus membuktikan
+      # rerun tidak mengubah angka
+      - name: Compare marts with snapshot
+        run: python -m scripts.check_mart_snapshot
+
+      # Pull request: daftar model dan dashboard yang terdampak, dibandingkan dengan
+      # manifest dbt dari main yang diterbitkan di Github Pages. !cancelled(): tetap jalan
+      # walau step sebelumnya gagal, karena justru saat itu ringkasan ini paling bergunan.
+      - name: Impact summary
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        run: |
+          mkdir -p prod-state
+          if curl -fsSL "$PROD_MANIFEST_URL" -o prod-state/manifest.json; then
+            cd dbt/olist
+            impacted=$(dbt -q ls --select state:modified+ --state ../../prod-state \
+              --resource-type model --resource-type exposure --output name)
+            {
+              echo "## Models and dashboards affected by this pull request"
+              echo
+              if [ -n "$impacted" ]; then echo "$impacted" | sed 's/^/- /'; else echo "No dbt changes."; fi
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Production manifest not published yet; impact summary skipped." >> "$GITHUB_STEP_SUMMARY"
+          fi
+        env:
+          PROD_MANIFEST_URL: https://rohid001.github.io/olist-data-pipeline/dbt/manifest.json
+
+      # Push ke main: bangun situs dbt docs (statis) beserta manifest-nya untuk GitHub Pages
+      - name: Build dbt docs site
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          cd dbt/olist && dbt docs generate --static
+          mkdir -p ../../site/dbt
+          cp target/static_index.html ../../site/dbt/index.html
+          cp target/manifest.json ../../site/dbt/manifest.json
+          # Halaman root mengarahkan ke dbt docs
+          echo '<meta http-equiv="refresh" content="0; url=dbt/">' > ../../site/index.html
+
+      - name: Upload docs for Github Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy-docs:
+    need: pipeline
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to Github Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

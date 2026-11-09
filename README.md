@@ -31,7 +31,7 @@ the DA project, and a regression check proves the new marts return the same numb
 | Full backfill time | not measured | 7 min 59.9 s on a desktop PC (about 18.5 s per month) |
 | Idempotency | reloading duplicated rows | re-running a month changes 0 row counts in `raw` and `marts` |
 | Automated tests | 0 | 71 dbt data tests + 13 pytest tests (9 unit, 4 dashboard smoke tests): 0 errors, 2 intentional warnings; sqlfluff 0 violations |
-| CI | none | GitHub Actions on every push, about 1 min 16 s; a pull request that breaks SQL lint is blocked |
+| CI/CD | none | GitHub Actions on every push and pull request: pre-commit, tests, lint, `dbt build`, and a golden test of all 11 dashboard marts; dbt docs published automatically to GitHub Pages |
 | BI access | database owner account | read-only `bi_reader` role that can only read `marts` |
 | Public access to the results | a Power BI file that only opens on Windows | a public Streamlit dashboard and dbt docs site, nothing to install |
 
@@ -86,8 +86,8 @@ flowchart TB
 | Ingestion | Python 3.12, pandas 3.0, SQLAlchemy 2.1, psycopg2, kagglehub |
 | Transformation | dbt-core 1.12 + dbt-postgres 1.11 (pinned: dbt v2 does not support Postgres yet) |
 | Orchestration | Apache Airflow 3.3.2, LocalExecutor, dbt in a separate venv inside the image |
-| Code quality | dbt data tests, pytest, sqlfluff (dbt templater) |
-| CI | GitHub Actions with a PostgreSQL service container |
+| Code quality | dbt data tests, pytest, sqlfluff (dbt templater), ruff, pre-commit |
+| CI/CD | GitHub Actions with a PostgreSQL service container, GitHub Pages |
 | Serving | Power BI Desktop (Import mode), Streamlit 1.66 on Streamlit Community Cloud, dbt docs |
 
 ## Data quality
@@ -100,12 +100,21 @@ flowchart TB
 - **Regression check** (`scripts/regression_check.py`): compares every mart with the CSV exports of the
   DA project. One known difference comes from an arbitrary `DISTINCT ON` tie-break in the DA view.
 
-## CI
+## CI/CD
 
 On every push to `main` and every pull request, GitHub Actions starts a temporary PostgreSQL 18 service
-and runs: pytest (including a headless smoke test of the Streamlit app) → sqlfluff lint → load a
-445-order sample (all 26 months, in `tests/fixtures/`) → `dbt build` → re-run one month to exercise the
-incremental path of `fct_orders`.
+and runs:
+
+1. **pre-commit**: trailing whitespace, final newlines, YAML syntax, large files, private keys, ruff.
+2. **pytest**: unit tests plus a headless smoke test of the Streamlit app.
+3. **sqlfluff** lint of all dbt SQL.
+4. **Pipeline on a 445-order sample** (all 26 months, in `tests/fixtures/`): partition, load, `dbt build`,
+   then a re-run of one month to exercise the incremental path of `fct_orders`.
+5. **Golden test**: the 11 dashboard marts must match the snapshot in `tests/fixtures/expected_marts/`, so
+   an unintended change in business logic fails the build.
+6. **Pull requests** get an impact summary: the models and dashboards affected by the change, found with
+   `dbt ls --select state:modified+` against the manifest of `main`.
+7. **Pushes to `main`** publish the dbt docs site and manifest to GitHub Pages.
 
 ## Dashboard
 
@@ -135,6 +144,7 @@ cd olist-data-pipeline
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+pre-commit install                   # run the checks before every commit
 
 Copy-Item .env.example .env          # then fill in the passwords in .env
 python -m ingestion.download_data    # 9 CSV files into data/source
@@ -177,11 +187,11 @@ olist-data-pipeline/
 ├── app/                      # public Streamlit dashboard + Parquet snapshot of the marts
 ├── dbt/olist/                # dbt project: models, seed, tests, 2 exposures
 ├── airflow/dags/             # monthly pipeline + static reference DAG
-├── tests/                    # pytest unit tests + CI sample data
+├── tests/                    # pytest tests, CI sample data, mart snapshot for the golden test
 ├── .github/workflows/ci.yml  # GitHub Actions
 ├── dashboard/                # Power BI file + screenshots
 ├── warehouse/init/           # schemas created on first start
-└── docs/                     # regression report, lineage image, dbt docs site
+└── docs/                     # architecture, regression report, images
 ```
 
 ## Limitations
@@ -190,8 +200,9 @@ olist-data-pipeline/
   order. The monthly pipeline replays history; it cannot show status updates or late changes to an order.
 - **Local only.** Everything runs on one machine with Docker Compose and the LocalExecutor. There is no
   cloud deployment, to keep the project free.
-- **CI uses a sample.** CI checks the code on 445 orders. Full-data checks (regression against the DA
-  results, full backfill) run locally, because the DA CSV exports are not in this repository.
+- **CI uses a sample.** CI checks the code on 445 orders, and the dbt docs site is built from that sample.
+  Full-data checks (regression against the DA results, full backfill) run locally, because the DA CSV
+  exports are not in this repository.
 - **Dashboard snapshot.** The public dashboard reads a Parquet snapshot committed to the repo, so it
   shows new data only after `export_marts.py` is re-run and the files are pushed.
 - **Power BI.** Import mode with a manual refresh; Power BI Desktop runs on Windows only. Column names in

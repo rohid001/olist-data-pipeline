@@ -10,6 +10,7 @@ lewat env pipeline di dalam image (lihat Dockerfile).
 """
 
 from datetime import timedelta
+
 import pendulum
 from airflow.providers.standard.operators.bash import BashOperator
 from airflow.sdk import DAG
@@ -47,13 +48,13 @@ with DAG(
         bash_command=f"{PIPELINE_BIN}/python -m ingestion.partition --month {BATCH_MONTH}",
         cwd=PROJECT_DIR,
     )
-    
+
     load_raw = BashOperator(
         task_id="load_raw",
         bash_command=f"{PIPELINE_BIN}/python -m ingestion.load_raw --month {BATCH_MONTH}",
         cwd=PROJECT_DIR,
     )
-    
+
     # Cukup cek raw.orders: semua tabel child dimuat dalam transaksi yang sama.
     # Tabel lain bisa kosong secara sah, misalnya belum ada review di batch 2016-09
     check_freshness = BashOperator(
@@ -61,11 +62,11 @@ with DAG(
         bash_command=f"{PIPELINE_BIN}/dbt source freshness --select source:raw.orders",
         cwd=DBT_DIR,
     )
-    
+
     dbt_build = BashOperator(
         task_id="dbt_build",
         bash_command=f"{PIPELINE_BIN}/dbt build",
         cwd=DBT_DIR,
     )
-    
+
     partition_month >> load_raw >> check_freshness >> dbt_build

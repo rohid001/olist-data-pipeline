@@ -24,22 +24,22 @@ REQUIRED_VARS = [
 
 def get_settings() -> dict:
     """Ambil pengaturan warehouse dari environtment variable, lalu kembalikan sebagai dict.
-    
+
     Di PC/Laptop nilainya berasal dari file .env. Di CI (Github Actions) tidak ada file .env;
     workflow mengisi variabel yang sama langsung sebagai environtment variable.
     """
     # Bila .env tidak ada, load_dotenv diam saja. override=False (bawaan): variabel yang
     # sudah ada di environment (dari CI atau docker-compose) tidak ditimpa isi .env.
     load_dotenv(ENV_FILE)
-    
+
     missing = [name for name in REQUIRED_VARS if not os.getenv(name)]
-    
+
     if missing:
         raise ValueError(
             f"Missing settings: {', '.join(missing)}. "
             "Copy .env.example to .env and fill in the values."
         )
-    
+
     return {
         "host": os.getenv("WAREHOUSE_HOST"),
         "port": int(os.getenv("WAREHOUSE_PORT")),
@@ -47,14 +47,14 @@ def get_settings() -> dict:
         "user": os.getenv("WAREHOUSE_USER"),
         "password": os.getenv("WAREHOUSE_PASSWORD"),
     }
-    
+
 def get_engine() -> Engine:
     """Buat engine SQLAlchemy ke warehouse.
-    
+
     Pakia URL.create (bukan f-string) supaya passowrd berisi karakter
     khusus seperti @ atau # tidak merusak alamat koneksi
     """
-    
+
     settings = get_settings()
     url = URL.create(
         drivername="postgresql+psycopg2",
@@ -65,7 +65,7 @@ def get_engine() -> Engine:
         database=settings["database"],
     )
     return create_engine(url)
-    
+
 if __name__ == "__main__":
     # Uji Tahap A: env terbaca, password tidak ikut dishownkan
     settings = get_settings()
@@ -78,4 +78,3 @@ if __name__ == "__main__":
     with engine.connect() as conn:
         result = conn.execute(text("SELECT 1")).scalar()
     print(f"SELECT 1 -> {result}")
-    

@@ -36,20 +36,21 @@ def build_sample() -> dict:
     """Kembalikan sampel semua tabel bulanan dan statis, mengikuti order yang terpilih"""
     orders = sample_orders(read_source("orders"))
     order_ids = orders["order_id"]
-    
+
     items = read_source("order_items")
     items = items[items["order_id"].isin(order_ids)]
     customers = read_source("customers")
     customers = customers[customers["customer_id"].isin(orders["customer_id"])]
     sellers = read_source("sellers")
     sellers = sellers[sellers["seller_id"].isin(items["seller_id"])]
-    
+
     # Geolocation tidak dipakai mart mana pun, jadi cukup bebearap baris per kode pos
     zips = pd.concat([customers["customer_zip_code_prefix"],
                       sellers["seller_zip_code_prefix"]])
     geolocation = read_source("geolocation")
-    geolocation = (geolocation[geolocation["geolocation_zip_code_prefix"].isin(zips)].groupby("geolocation_zip_code_prefix").head(GEO_ROWS_PER_ZIP))
-    
+    geolocation = (geolocation[geolocation["geolocation_zip_code_prefix"].isin(zips)
+                               ].groupby("geolocation_zip_code_prefix").head(GEO_ROWS_PER_ZIP))
+
     sample = {
         "orders": orders,
         "order_items": items,
@@ -81,5 +82,3 @@ if __name__ == "__main__":
         print(f"{table:<16} {len(df):>6,}")
     size_kb = sum(f.stat().st_size for f in SAMPLE_DIR.glob("*.csv")) / 1024
     print(f"Sample written to {SAMPLE_DIR.relative_to(ROOT_DIR).as_posix()} ({size_kb:,.0f} KB)")
-    
-    

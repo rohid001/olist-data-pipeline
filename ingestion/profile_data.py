@@ -9,6 +9,7 @@ Jalankan dari root repo: python -m ingestion.profile_data
 """
 
 import sys
+
 import pandas as pd
 
 from ingestion.config import ROOT_DIR
@@ -70,7 +71,7 @@ def check_keys(data: dict) -> None:
     if has_problem:
         print("Some keys are not unique. Fix the contract.")
         sys.exit(1)
-        
+
 #----------------------------------------------------------------- Tahap C
 def to_month(column: pd.Series) -> pd.Series:
     """'20170-01-15 10:20:00' -> '2017-01'."""
@@ -102,7 +103,7 @@ def compare_review_months(data: dict) -> dict:
         "late": int((review_month > order_month).sum()),
         "early": int((review_month < order_month).sum()),
     }
-    
+
 def count_multi_month_dims(data: dict) -> dict:
     """Hitung dimensi yang muncul di lebih dari satu bulan (alasan memilih upsert)."""
     orders = data["orders"].assign(month=to_month(data["orders"]["order_purchase_timestamp"]))
@@ -148,7 +149,7 @@ def write_report(per_month: pd.DataFrame, reviews: dict, dims: dict) -> None:
         f"- customer_id values reused by more than 1 order: {dims['reused_customer_ids']:,}",
     ]
     REPORT_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    
+
 
 if __name__ == "__main__":
     # Uji Tahap A: 9 file ada dan kolomnya sesuai kontrak
@@ -175,5 +176,3 @@ if __name__ == "__main__":
 
     write_report(per_month, reviews, dims)
     print(f"Report saved: {REPORT_FILE.relative_to(ROOT_DIR).as_posix()}")
-    
-        

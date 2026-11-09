@@ -1,0 +1,13 @@
+month_number,month_name,total_revenue,order_count
+1,January,4565.43,37
+2,February,4681.34,39
+3,March,4864.53,40
+4,April,8555.48,40
+5,May,4946.17,38
+6,June,5044.41,38
+7,July,5906.37,38
+8,August,4422.04,39
+9,September,1155.32,19
+10,October,5383.72,38
+11,November,2424.56,18
+12,December,4211.23,21

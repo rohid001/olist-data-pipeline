@@ -21,7 +21,7 @@ def no_env_file(monkeypatch, tmp_path):
     """Arahkan ENV_FILE ke file yang tidak ada, supaya .env asli di laptop tidak ikut
     terbaca."""
     monkeypatch.setattr(config, "ENV_FILE", tmp_path/ ".env")
-    
+
 def test_settings_from_environmen_only(no_env_file, monkeypatch):
     for name, value in SETTINGS.items():
         monkeypatch.setenv(name, value)
@@ -35,4 +35,3 @@ def test_missing_setting_is_reported(no_env_file, monkeypatch):
     monkeypatch.delenv("WAREHOUSE_PASSWORD")
     with pytest.raises(ValueError, match="WAREHOUSE_PASSWORD"):
         config.get_settings()
-        

@@ -40,7 +40,7 @@ def show_overview() -> None:
     cols[2].metric("Customers", f"{int(kpi['total_customers']):,}")
     cols[3].metric("Avg order value", money(kpi["avg_order_value"]))
     cols[4].metric("Avg review score", f"{kpi['avg_review_score']:.2f} / 5")
-    
+
     monthly = load("mart_revenue_monthly").assign(month=lambda df: pd.to_datetime(df["month"]))
     chart = alt.Chart(monthly).mark_line(point=True).encode(
         x=alt.X("month:T", title="Month"),
@@ -49,7 +49,7 @@ def show_overview() -> None:
     )
     st.subheader("Monthly revenue")
     st.altair_chart(chart, width="stretch")
-    
+
     wins = load("mart_category_win_count").sort_values("state_count", ascending=False).iloc[0]
     state_count = load("mart_category_per_state")["customer_state"].nunique()
     top_state = load("mart_revenue_per_state").sort_values("total_revenue", ascending=False).iloc[0]
@@ -58,7 +58,7 @@ def show_overview() -> None:
                    f"{wins['category']} ({wins['state_count']}/{state_count} states)")
     cols[1].metric("Top state by revenue",
                    f"{top_state['customer_state']} - {money(top_state['total_revenue'])}")
-    
+
 #---------------------------------------------------------------------------------Tahap B
 def show_customer_rfm() -> None:
     """Halaman 2: distribusi segmen RFM, one-time vs repeat buyer, dan Top Champions."""
@@ -73,19 +73,19 @@ def show_customer_rfm() -> None:
         ),
         width="stretch",
     )
-    
+
     buyers = load("mart_buyer_type")
     st.subheader("One-time vs repeat buyers")
     cols = st.columns(len(buyers))
     for col, row in zip(cols, buyers.itertuples()):
         col.metric(row.customer_type, f"{row.customer_pct:.1f}% of customers",
                    f"{row.revenue_pct:.1f}% of revenue", delta_color="off", delta_arrow="off")
-    
+
     st.subheader("Top 10 Champions by monetary value")
     champions = rfm[rfm["rfm_segment"] == "Champions"].nlargest(10, "monetary")
     columns = ["customer_unique_id", "recency_days", "frequency", "monetary", "rfm_code"]
     st.dataframe(champions[columns], hide_index=True, width="stretch")
-    
+
 def show_revenue_trend() -> None:
     """Halaman 3: growth MoM, kategori dengan pertumbuhan tertinggi, dan pola musiman."""
     monthly = load("mart_revenue_monthly").assign(month=lambda df: pd.to_datetime(df["month"]))
@@ -105,14 +105,14 @@ def show_revenue_trend() -> None:
         ),
         width="stretch",
     )
-    
+
     st.subheader("Fastest-growing categories, 2017 -> 2018")
     min_revenue = st.slider("Minimum 2017 revenue (R$)", 0, 50_000, 10_000, step=5_000,
                             help="Exludes categories whose growth comes from a tiny 2017 base.")
     categories = load("mart_category_growth")
     top = categories[categories["revenue_2017"] >= min_revenue].nlargest(10, "growth_pct")
     st.dataframe(top, hide_index=True, width="stretch")
-    
+
     seasonality = load("mart_seasonality")
     st.subheader("Revenue by calender month (all years combined)")
     st.altair_chart(
@@ -125,7 +125,7 @@ def show_revenue_trend() -> None:
     )
     st.caption("September-December has only one full year of data, January-August has two, "
                "so this is not a true seasonal pattern.")
-    
+
 #---------------------------------------------------------------------------------Tahap C
 def show_churn_risk() -> None:
     """Halaman 4: status churn, review score per status, dan repeat buyer yang berhenti."""
@@ -140,12 +140,12 @@ def show_churn_risk() -> None:
     cols[2].metric("Avg review, Active", f"{reviews.loc['Active', 'avg_review_score']:.2f}")
     cols[3].metric("Avg review, At Risk", f"{reviews.loc['At Risk', 'avg_review_score']:.2f}")
     st.caption("At Risk = no order for more than 180 days. Most of them are one-time buyers.")
-    
+
     lapsed = churn[(churn["churn_status"] == "At Risk") & (churn["total_orders"] > 1)]
     st.subheader(f"Repeat buyers who stoped ordering: {len(lapsed):,} customers")
     st.write("These customers came back at least once, so they are the best retention target.")
     st.dataframe(lapsed.nlargest(10, "total_orders"), hide_index=True, width="stretch")
-    
+
 def show_category_region() -> None:
     """Halaman 5: revenue per state dan kategori dengan margin terbesar di tiap state."""
     states = load("mart_revenue_per_state")

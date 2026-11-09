@@ -12,6 +12,9 @@ data/**
 !data/**/
 !data/**/.gitkeep
 
+# Salinan sampel CI untuk membuat sanpshot mart di laptop (P6)
+data_ci/
+
 # --- dbt (dipakai mulai Fase 4) ---
 dbt/olist/target/
 dbt/olist/logs/

@@ -9,6 +9,7 @@ import pytest
 
 from ingestion.partition import build_partition, to_month
 
+
 def make_data() -> dict:
     """Data mini: 3 order (2 di januari, 1 di februari) beserta tabel turunannya."""
     orders = pd.DataFrame({
@@ -43,11 +44,11 @@ def make_data() -> dict:
 def test_time_column_select_only_that_month():
     result = build_partition(make_data(), "orders", "2017-01")
     assert list(result["order_id"]) == ["o1", "o2"]
-    
+
 def test_child_rows_follow_parent_month():
     result = build_partition(make_data(), "order_items", "2017-01")
     assert list(result["order_id"]) == ["o1", "o1", "o2"]
-    
+
 def test_customers_follow_their_order():
     result = build_partition(make_data(), "customers", "2017-02")
     assert list(result["customer_id"]) == ["c3"]
