@@ -1,7 +1,7 @@
 # CI: setiap push ke main dan setiap pull request, GitHub menjalankan pre-commit, unit test.
-# lint SQL, lalu seluruh pipeline (partisi -> load raw -> dbt build) di atas sample data
-# kecil (tests/fixtures/olist_sample) dan PostgreSQL sementara, lalu mencocokkan isi mart
-# dengan snapshot. Push ke main juga menerbitkan dbt docs ke Github Pages.
+# lint SQL, lalu seluruh pipeline(partisi -> load raw -> event lewat Kafka -> dbt build) di
+# atas sampel data kecil (tests/fixtures/olist_sample), PostgreSQL dan Kafka sementara, lalu
+# mencocokkan isi mart dengan snapshot. Push ke main juga menerbitkan dbt docs ke Github Pages.
 name: CI
 
 on:
@@ -30,6 +30,17 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # Broker Kafka sementara (P2). Konfigurasi bawaan image sudah satu node KRaft yang
+      # mengiklankan localhost:9092, cocok dengan port yang dibuka ke runner.
+      kafka:
+        image: apache/kafka:4.4.0
+        ports:
+          - 9092:9092
+        options: >-
+          --health-cmd "/opt/kafka/bin/kafka-broker-api-version.sh --bootstrap-server localhost:9092"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 12
 
     # Pengganti .env di CI. Password ini bukan rahasia: hanya berlaku untuk database
     # sementara di atas, yang tidak bisa diakses dari luar dan hilang setelah job selesai.
@@ -76,6 +87,14 @@ jobs:
           cp tests/fixtures/olist_sample/*.csv data/source/
           python -m ingestion.partition --all
           python -m ingestion.load_raw --all
+
+      # P2: putar ulang event order sampel lewat Kafka, lalu muat ke raw.order_events.
+      # Stream report mencetak duplikat yang dibuang, event tidak berurutan, dan lag.
+      - name: Stream sample events through Kafka
+        run: |
+          python -m streaming.producer --all
+          python -m streaming.consumer --idle-timeout 10
+          python -m streaming.stream_report
 
       - name: dbt build
         working-directory: dbt/olist

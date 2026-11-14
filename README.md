@@ -5,6 +5,7 @@
 ![dbt](https://img.shields.io/badge/dbt--core-1.12-FF694B)
 ![Airflow](https://img.shields.io/badge/Airflow-3.3-017CEE)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791)
+![Kafka](https://img.shields.io/badge/Apache%20Kafka-4.4-231F20)
 ![Power BI](https://img.shields.io/badge/Power%20BI-dashboard-F2C811)
 
 *Bahasa Indonesia: [README.id.md](README.id.md)*
@@ -15,7 +16,8 @@ A monthly batch ELT pipeline for the [Olist Brazilian E-Commerce dataset](https:
 (99,441 orders placed Sep 2016 – Oct 2018; the delivered orders used in the analysis run to Aug 2018). It turns my earlier Data Analyst project,
 [olist-sql-dashboard](https://github.com/rohid001/olist-sql-dashboard), from SQL files run by hand into
 an automated, tested pipeline: Python ingestion → PostgreSQL → dbt → Airflow → Power BI and Streamlit, all started with
-`docker compose up`.
+`docker compose up`. A second path replays the order history as events through Apache Kafka, to show
+how the same warehouse handles duplicate and late-arriving events.
 
 The business logic (RFM segments, revenue trend, churn, category and region analysis) is the same as in
 the DA project, and a regression check proves the new marts return the same numbers.
@@ -30,7 +32,8 @@ the DA project, and a regression check proves the new marts return the same numb
 | Monthly batches | none (one-off load) | 26 of 26 Airflow runs succeeded, including an empty month (Nov 2016) |
 | Full backfill time | not measured | 7 min 59.9 s on a desktop PC (about 18.5 s per month) |
 | Idempotency | reloading duplicated rows | re-running a month changes 0 row counts in `raw` and `marts` |
-| Automated tests | 0 | 71 dbt data tests + 13 pytest tests (9 unit, 4 dashboard smoke tests): 0 errors, 2 intentional warnings; sqlfluff 0 violations |
+| Automated tests | 0 | 82 dbt data tests + 20 pytest tests (16 unit, 4 dashboard smoke tests): 0 errors, 2 intentional warnings; sqlfluff 0 violations |
+| Event streaming | none | 392,856 order events replayed through Kafka with 7,846 deliberate duplicates and 19,492 late events: the stream table matches the batch data with 0 mismatches, a consumer crash loses or duplicates 0 events, and replaying the full history a second time (853,484 messages in the topic) still leaves exactly 392,856 rows |
 | CI/CD | none | GitHub Actions on every push and pull request: pre-commit, tests, lint, `dbt build`, and a golden test of all 11 dashboard marts; dbt docs published automatically to GitHub Pages |
 | BI access | database owner account | read-only `bi_reader` role that can only read `marts` |
 | Public access to the results | a Power BI file that only opens on Windows | a public Streamlit dashboard and dbt docs site, nothing to install |
@@ -47,6 +50,8 @@ flowchart TB
     end
 
     source --> partition
+    source -->|producer.py| kafka[["Kafka topic<br/>olist.order_events"]]
+    kafka -->|"consumer.py (at-least-once,<br/>dedup on event_id)"| raw
     load -->|"delete-insert / upsert"| raw
 
     subgraph warehouse["PostgreSQL 18 warehouse"]
@@ -64,7 +69,13 @@ flowchart TB
   (`data/landing/<table>/month=YYYY-MM/`) based on the data contract in `ingestion/data_contract.py`.
   `load_raw.py` loads one month into the `raw` schema in a single transaction: fact tables use
   delete-insert by `_batch_id`, dimension tables use upsert, so a month can be reloaded safely.
-- **Transformation (dbt).** 27 models in three layers: staging (rename, cast, deduplicate),
+- **Streaming (Kafka).** `streaming/producer.py` replays the four timestamps of every order (created,
+  approved, shipped, delivered) as events, sending some late and some twice on purpose.
+  `streaming/consumer.py` writes them to `raw.order_events` and commits Kafka offsets only after the
+  database commit; duplicates are dropped by the `event_id` primary key. `fct_order_lifecycle` is
+  incremental on arrival time, so late events are picked up by the next run. Details in
+  [docs/architecture.md](docs/architecture.md#9-event-stream-kafka).
+- **Transformation (dbt).** 30 models in three layers: staging (rename, cast, deduplicate),
   intermediate (reusable joins), and marts (`dim_`/`fct_` plus 11 analytics marts). `fct_orders` is
   incremental (`delete+insert` on `order_id`).
 - **Orchestration (Airflow 3).** Each DAG run processes one month: partition, load, source freshness
@@ -86,14 +97,16 @@ flowchart TB
 | Ingestion | Python 3.12, pandas 3.0, SQLAlchemy 2.1, psycopg2, kagglehub |
 | Transformation | dbt-core 1.12 + dbt-postgres 1.11 (pinned: dbt v2 does not support Postgres yet) |
 | Orchestration | Apache Airflow 3.3.2, LocalExecutor, dbt in a separate venv inside the image |
+| Streaming | Apache Kafka 4.4 (single node, KRaft), confluent-kafka 2.16 |
 | Code quality | dbt data tests, pytest, sqlfluff (dbt templater), ruff, pre-commit |
-| CI/CD | GitHub Actions with a PostgreSQL service container, GitHub Pages |
+| CI/CD | GitHub Actions with PostgreSQL and Kafka service containers, GitHub Pages |
 | Serving | Power BI Desktop (Import mode), Streamlit 1.66 on Streamlit Community Cloud, dbt docs |
 
 ## Data quality
 
-- **71 dbt data tests**: keys (`unique`, `not_null`), `relationships` between layers, `accepted_values`,
-  and 4 singular tests from the DA data audit (for example: total revenue must match across three marts).
+- **82 dbt data tests**: keys (`unique`, `not_null`), `relationships` between layers, `accepted_values`,
+  4 singular tests from the DA data audit (for example: total revenue must match across three marts),
+  and 1 that checks the Kafka events against the batch data.
 - **Source freshness** on `raw.orders` before every `dbt build` in Airflow.
 - **Two intentional warnings** are real findings in the Olist data, not bugs: 303 orders whose payment
   total differs from item price + freight, and 44 reviews created before their order date.
@@ -102,14 +115,15 @@ flowchart TB
 
 ## CI/CD
 
-On every push to `main` and every pull request, GitHub Actions starts a temporary PostgreSQL 18 service
-and runs:
+On every push to `main` and every pull request, GitHub Actions starts temporary PostgreSQL 18 and
+Kafka 4.4 services and runs:
 
 1. **pre-commit**: trailing whitespace, final newlines, YAML syntax, large files, private keys, ruff.
 2. **pytest**: unit tests plus a headless smoke test of the Streamlit app.
 3. **sqlfluff** lint of all dbt SQL.
-4. **Pipeline on a 445-order sample** (all 26 months, in `tests/fixtures/`): partition, load, `dbt build`,
-   then a re-run of one month to exercise the incremental path of `fct_orders`.
+4. **Pipeline on a 445-order sample** (all 26 months, in `tests/fixtures/`): partition, load, replay the
+   sample's order events through Kafka, `dbt build`, then a re-run of one month to exercise the
+   incremental path of `fct_orders`.
 5. **Golden test**: the 11 dashboard marts must match the snapshot in `tests/fixtures/expected_marts/`, so
    an unintended change in business logic fails the build.
 6. **Pull requests** get an impact summary: the models and dashboards affected by the change, found with
@@ -173,6 +187,15 @@ pip install -r app/requirements.txt
 streamlit run app/streamlit_app.py      # http://localhost:8501
 ```
 
+To replay the order history through Kafka (two terminals, venv active in both):
+
+```powershell
+docker compose --profile streaming up -d kafka
+python -m streaming.consumer                               # terminal 1, stop with Ctrl+C
+python -m streaming.producer --month 2017-11 --speed 86400 # terminal 2: one day of data per second
+python -m streaming.stream_report                          # duplicates, late events, latency, lag
+```
+
 Without Airflow, the same pipeline runs by hand: `python -m ingestion.partition --all`,
 `python -m ingestion.load_raw --all`, then `dbt build` from `dbt\olist`.
 
@@ -180,9 +203,10 @@ Without Airflow, the same pipeline runs by hand: `python -m ingestion.partition 
 
 ```text
 olist-data-pipeline/
-├── docker-compose.yml        # warehouse + Airflow
+├── docker-compose.yml        # warehouse + Airflow, Kafka in the "streaming" profile
 ├── Dockerfile                # Airflow image with a separate venv for the pipeline
 ├── ingestion/                # config, data contract, download, partition, load_raw
+├── streaming/                # Kafka producer, consumer, stream report
 ├── scripts/                  # regression check, CI sample builder, bi_reader setup, mart export
 ├── app/                      # public Streamlit dashboard + Parquet snapshot of the marts
 ├── dbt/olist/                # dbt project: models, seed, tests, 2 exposures
@@ -190,7 +214,7 @@ olist-data-pipeline/
 ├── tests/                    # pytest tests, CI sample data, mart snapshot for the golden test
 ├── .github/workflows/ci.yml  # GitHub Actions
 ├── dashboard/                # Power BI file + screenshots
-├── warehouse/init/           # schemas created on first start
+├── warehouse/init/           # schemas and the order events table, created on first start
 └── docs/                     # architecture, regression report, images
 ```
 
@@ -198,6 +222,9 @@ olist-data-pipeline/
 
 - **Replay, not live data.** The dataset is a static snapshot that keeps only the final status of each
   order. The monthly pipeline replays history; it cannot show status updates or late changes to an order.
+- **Stream from a snapshot.** The events are rebuilt from the four timestamps in the orders table, so
+  there is no event for a cancellation (the dataset has no cancellation time). The stream uses one
+  broker, JSON messages without a schema registry, and no dead-letter topic.
 - **Local only.** Everything runs on one machine with Docker Compose and the LocalExecutor. There is no
   cloud deployment, to keep the project free.
 - **CI uses a sample.** CI checks the code on 445 orders, and the dbt docs site is built from that sample.

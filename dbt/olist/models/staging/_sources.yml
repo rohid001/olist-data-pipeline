@@ -36,3 +36,12 @@ sources:
         config:
           # Tabel statis dimuat sekali, jadi tidak perlu dicek kesegarannya
           freshness: null
+      - name: order_events
+        description: >
+          Event order dari topik kafka olist.order_events (P2), ditulis oleh
+          streaming/consumer.py. Satu baris per event_id; duplikat dibuang saat ditulis.
+        config:
+          loaded_at_field: _ingested_at
+          # Stream di project ini diputar ulang sesekali, bukan berjalan terus,
+          # jadi kesegarannya belum dicek
+          freshness: null

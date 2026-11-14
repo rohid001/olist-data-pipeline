@@ -91,3 +91,24 @@ DA project: load and audit first, constrain later.
 | `mart_category_per_state` | 1 row per `customer_state`: its top category by gross margin (ties keep both) |
 | `mart_revenue_per_state` | 1 row per `customer_state` |
 | `mart_overview_kpi` | 1 row with the dashboard KPIs |
+| `stg_order_events` | 1 row per `event_id` (`<order_id>-<event_type>`) |
+| `fct_order_lifecycle` | 1 row per `order_id` that has received at least one event |
+| `mart_delivery_performance` | 1 row per purchase month |
+
+## 9. Event stream (Kafka)
+
+- **Events.** `streaming/producer.py` turns the four order timestamps (purchase, approval, handover to
+  the carrier, delivery) into events and replays them in time order to the topic `olist.order_events`
+  (3 partitions). The message key is `order_id`, so all events of one order land in the same partition
+  and keep their order.
+- **Simulated problems.** By default 5% of events are sent 1–72 hours late and 2% are sent twice, with a
+  fixed seed so every replay is identical.
+- **Delivery semantics.** `streaming/consumer.py` writes each batch to `raw.order_events` in one
+  transaction and commits the Kafka offsets only afterwards (at-least-once). Re-delivered messages are
+  dropped by `ON CONFLICT (event_id) DO NOTHING`, so the table holds every event exactly once.
+- **Late data in dbt.** `fct_order_lifecycle` is incremental on arrival time (`ingested_at`), not event
+  time, with a 10-minute lookback. Every order that receives a new event is recomputed from all of its
+  events, and its current stage comes from the business order of the stages, not from the event that
+  arrived last.
+- **Reconciliation.** The singular test `assert_stream_matches_batch` checks that every event that has
+  arrived matches the timestamp in the batch table `stg_orders`.

@@ -1,0 +1,33 @@
+version: 2
+
+# Model dari event Kafka (P2). Dibangun bersama model batch oleh dbt build biasa.
+models:
+  - name: fct_order_lifecycle
+    description: >
+      Satu baris per order yang sudah menerima event dari Kafka. Incremental berdasarkan
+      waktu tiba (ingested_at), jadi event yang terlambat ikut diproses di run berikutnya.
+    columns:
+      - name: order_id
+        data_tests:
+          - unique
+          - not_null
+      - name: created_at
+        description: Bisa kosong sebentar bila event order_created tiba terlambat.
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: current_stage_number
+        description: 1 dibuat, 2 disetujui, 3 dikirim, 4 diterima.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+
+  - name: mart_delivery_performance
+    description: Lama persetujuan, lama pengiriman, dan persentase tepat waktu per bulan pembelian
+    columns:
+      - name: purchase_month
+        data_tests:
+          - unique
+          - not_null

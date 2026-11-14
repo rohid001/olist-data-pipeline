@@ -28,6 +28,9 @@ models:
 vars:
   # Batas hari tanpa order sebelum pelanggan dianggap "At Risk" (aturan project DA)
   churn_threshold_days: 180
+  # Model incremental streaming membaca ulang event yang tiba sekian menit sebelum event
+  #terakhir yang sudah diproses, untuk transaksi consumer yang commit terlambat (P2)
+  stream_lookback_minutes: 10
 
 seeds:
   olist:
