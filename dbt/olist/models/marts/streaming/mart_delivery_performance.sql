@@ -16,7 +16,7 @@ select
         avg(extract(epoch from approved_at - created_at) / 3600)::numeric, 2
     ) as avg_hours_to_approve,
     round(
-        avg(extract(epoch from delivered_at - created_at) / 86400):: numeric, 2
+        avg(extract(epoch from delivered_at - created_at) / 86400)::numeric, 2
     ) as avg_days_to_deliver,
     round(
         100.0 * count(*) filter (where delivered_at::date <= estimated_delivery_at::date)
